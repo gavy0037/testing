@@ -1,5 +1,7 @@
 from fastapi import WebSocket, WebSocketDisconnect, APIRouter
 from manager.room_manager import room_connection_manager, check_win_or_draw
+from manager.lobby_manager import manager as lobby_manager
+from api.lobby_endpoint import get_leaderboard
 from script.update_rating import update_rating
 
 game_router = APIRouter()
@@ -65,6 +67,7 @@ async def room_endpoint(room_id : str , websocket : WebSocket):
                             opp_uid = uid
                     self_uid = room_obj.uids[websocket]
                     update_rating(1.0,self_uid,opp_uid)
+                    await lobby_manager.broadcast({"type": "leaderboard", "players": get_leaderboard()})
 
                     if room_id in room_connection_manager.room_list:
                         del room_connection_manager.room_list[room_id]
@@ -79,6 +82,7 @@ async def room_endpoint(room_id : str , websocket : WebSocket):
                             opp_uid = uid
                     self_uid = room_obj.uids[websocket]
                     update_rating(0.5,self_uid,opp_uid)
+                    await lobby_manager.broadcast({"type": "leaderboard", "players": get_leaderboard()})
 
                     if room_id in room_connection_manager.room_list:
                         del room_connection_manager.room_list[room_id]
@@ -98,5 +102,6 @@ async def room_endpoint(room_id : str , websocket : WebSocket):
             # Only apply forfeit if the other person was actually connected
             if opp_uid:
                 update_rating(0.0, self_uid, opp_uid)
+                await lobby_manager.broadcast({"type": "leaderboard", "players": get_leaderboard()})
 
         await room_connection_manager.disconnect(websocket , room_id)
